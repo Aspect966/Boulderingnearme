@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/run-supabase-mcp.ps1"
+      ]
+    }
+  }
+}
