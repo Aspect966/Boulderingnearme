@@ -4,7 +4,41 @@ export interface Profile {
   id: string;
   display_name: string | null;
   role: "user" | "owner";
+  bio: string | null;
+  avatar_path: string | null;
+  background_path: string | null;
+  location: string | null;
+  website: string | null;
   created_at: string;
+}
+
+export type FriendshipStatus = "pending" | "accepted";
+
+export interface Friendship {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: FriendshipStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileStats {
+  boulders: number;
+  comments: number;
+  ratings: number;
+  friends: number;
+}
+
+export interface ProfileWithStats extends Profile {
+  stats: ProfileStats;
+}
+
+export interface FriendProfile {
+  id: string;
+  display_name: string | null;
+  avatar_path: string | null;
+  bio: string | null;
 }
 
 export interface Boulder {

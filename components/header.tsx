@@ -35,6 +35,18 @@ export async function Header() {
           </Link>
           {user ? (
             <>
+              <Link
+                href={`/profile/${user.id}`}
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 sm:inline-block"
+              >
+                Profile
+              </Link>
+              <Link
+                href="/friends"
+                className="hidden rounded-lg px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 sm:inline-block"
+              >
+                Friends
+              </Link>
               <Link href="/boulders/new">
                 <Button size="sm">Add Boulder</Button>
               </Link>

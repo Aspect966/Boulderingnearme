@@ -8,8 +8,13 @@ export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("display_name") ?? "").trim();
+  const acceptedTerms = formData.get("accept_terms") === "yes";
 
-  const { error } = await supabase.auth.signUp({
+  if (!acceptedTerms) {
+    return { error: "You must accept the Terms of Service and Privacy Policy." };
+  }
+
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -19,7 +24,12 @@ export async function signUp(formData: FormData) {
 
   if (error) return { error: error.message };
 
-  redirect("/auth/login?message=Check your email to confirm your account.");
+  // When email confirmation is disabled in Supabase, signUp returns a session immediately.
+  if (data.session) {
+    redirect("/profile/edit?welcome=1");
+  }
+
+  redirect("/auth/login?message=Account created. Sign in to continue.");
 }
 
 export async function signIn(formData: FormData) {

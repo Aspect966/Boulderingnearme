@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Outfit } from "next/font/google";
 import { Header } from "@/components/header";
+import { LEGAL } from "@/components/legal-document";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -28,9 +30,22 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <footer className="border-t border-stone-200 bg-white">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p>BoulderingNearMe.com — community-powered outdoor bouldering</p>
-            <p>Grades use outlier-filtered consensus · Default V-Scale</p>
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-stone-500 sm:px-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p>BoulderingNearMe.com — community-powered outdoor bouldering</p>
+              <p>Grades use outlier-filtered consensus · Default V-Scale</p>
+            </div>
+            <nav className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link href="/terms" className="hover:text-stone-700 hover:underline">
+                Terms of Service
+              </Link>
+              <Link href="/privacy" className="hover:text-stone-700 hover:underline">
+                Privacy Policy
+              </Link>
+            </nav>
+            <p className="text-xs text-stone-400">
+              By using {LEGAL.siteName}, you agree to our Terms and Privacy Policy.
+            </p>
           </div>
         </footer>
       </body>

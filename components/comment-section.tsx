@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { addComment } from "@/app/actions/comments";
 import { Button } from "@/components/ui/button";
@@ -46,9 +47,12 @@ export function CommentSection({
                 className="rounded-xl border border-stone-100 bg-stone-50 px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-stone-800">
+                  <Link
+                    href={`/profile/${comment.user_id}`}
+                    className="text-sm font-semibold text-stone-800 hover:text-amber-700"
+                  >
                     {comment.profiles?.display_name ?? "Climber"}
-                  </p>
+                  </Link>
                   <time className="text-xs text-stone-400">
                     {new Date(comment.created_at).toLocaleDateString()}
                   </time>

@@ -20,6 +20,9 @@ Open **Supabase Dashboard → SQL Editor** and run these files in order:
 3. `supabase/migrations/003_photo_thumbnail.sql`
 4. `supabase/migrations/004_boulder_photos_bucket_and_thumbnail.sql`
 5. `supabase/migrations/005_comments_profiles_fkey.sql`
+6. `supabase/migrations/006_profiles_and_friends.sql`
+
+For local dev, disable email confirmation under **Authentication → Settings → Confirm email** so users can sign up and use the app immediately without verifying their inbox.
 
 If photo uploads fail with a missing `is_thumbnail` column or storage bucket error, you can also run the one-shot fix:
 
@@ -30,8 +33,6 @@ That adds the thumbnail column, creates the public `boulder-photos` storage buck
 ### 2. Enable email auth
 
 In Supabase: **Authentication → Providers → Email** (enabled by default).
-
-For local dev, you may disable email confirmation under **Authentication → Settings**.
 
 ### 3. Environment variables
 
@@ -61,6 +62,8 @@ Open [http://localhost:3000](http://localhost:3000).
 - **Multi-scale grades** — V-Scale (default), Font, British, Japanese, YDS
 - **Consensus grading** — IQR outlier removal, whole-number averages
 - **Comments** — community beta and conditions
+- **Profiles** — custom avatars, cover images, bio, location, and website
+- **Friends** — send requests, accept/decline, and view friend lists on profiles
 
 ## Deploy to Vercel
 
