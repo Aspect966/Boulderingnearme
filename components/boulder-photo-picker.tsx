@@ -181,7 +181,7 @@ export function BoulderPhotoPicker({
           className="mt-4 flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center transition hover:border-amber-300 hover:bg-amber-50/40"
         >
           <span className="text-sm font-medium text-stone-800">Choose photos</span>
-          <span className="mt-1 text-xs text-stone-500">PNG, JPG, or WEBP up to 5 MB each</span>
+          <span className="mt-1 text-xs text-stone-500">PNG, JPG, or WEBP up to 30 MB each</span>
         </button>
       )}
     </div>

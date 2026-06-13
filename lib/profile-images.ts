@@ -1,4 +1,4 @@
-export const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_PROFILE_IMAGE_BYTES = 30 * 1024 * 1024;
 
 export function validateProfileImage(file: File): string | null {
   if (!file || file.size === 0) {
@@ -10,7 +10,7 @@ export function validateProfileImage(file: File): string | null {
   }
 
   if (file.size > MAX_PROFILE_IMAGE_BYTES) {
-    return "Image must be under 5 MB.";
+    return "Image must be under 30 MB.";
   }
 
   return null;

@@ -219,8 +219,8 @@ async function downloadPhoto(url) {
     if (!res.ok) throw new Error(`Photo download failed (${res.status}): ${url}`);
     const contentType = res.headers.get("content-type") ?? "image/jpeg";
     const buffer = Buffer.from(await res.arrayBuffer());
-    if (buffer.length > 5 * 1024 * 1024) {
-      throw new Error(`Photo exceeds 5 MB: ${url}`);
+    if (buffer.length > 30 * 1024 * 1024) {
+      throw new Error(`Photo exceeds 30 MB: ${url}`);
     }
     return { buffer, contentType };
   }

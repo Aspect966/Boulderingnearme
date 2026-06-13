@@ -55,12 +55,12 @@ values (
   'profile-assets',
   'profile-assets',
   true,
-  5242880,
+  31457280,
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 )
 on conflict (id) do update
 set public = true,
-    file_size_limit = 5242880,
+    file_size_limit = 31457280,
     allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 create policy "Public read profile assets"

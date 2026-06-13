@@ -13,7 +13,7 @@ values (
   'boulder-photos',
   'boulder-photos',
   true,
-  5242880,
+  31457280,
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 )
 on conflict (id) do update set

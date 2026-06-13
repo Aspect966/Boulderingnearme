@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BoulderPhoto } from "@/lib/types";
 
 export const MAX_BOULDER_PHOTOS = 10;
-export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 
 export function validatePhotoFile(file: File): string | null {
   if (!file || file.size === 0) {
@@ -14,7 +14,7 @@ export function validatePhotoFile(file: File): string | null {
   }
 
   if (file.size > MAX_PHOTO_BYTES) {
-    return "Each photo must be under 5 MB.";
+    return "Each photo must be under 30 MB.";
   }
 
   return null;
