@@ -41,11 +41,28 @@ export function ProfileEditForm({
   const [backgroundSuccess, setBackgroundSuccess] = useState<string | null>(null);
   const [backgroundPending, startBackgroundTransition] = useTransition();
 
+  // Cache-bust versions — set to Date.now() after a successful upload so the
+  // browser fetches the new file even though the storage path stays the same.
+  const [avatarVersion, setAvatarVersion] = useState<number | null>(null);
+  const [backgroundVersion, setBackgroundVersion] = useState<number | null>(null);
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
-  const avatarUrl = getProfileAssetUrl(profile.avatar_path);
-  const backgroundUrl = getProfileAssetUrl(profile.background_path);
+  const rawAvatarUrl = getProfileAssetUrl(profile.avatar_path);
+  const rawBackgroundUrl = getProfileAssetUrl(profile.background_path);
+
+  const avatarUrl = rawAvatarUrl
+    ? avatarVersion
+      ? `${rawAvatarUrl}?v=${avatarVersion}`
+      : rawAvatarUrl
+    : null;
+
+  const backgroundUrl = rawBackgroundUrl
+    ? backgroundVersion
+      ? `${rawBackgroundUrl}?v=${backgroundVersion}`
+      : rawBackgroundUrl
+    : null;
 
   // ── Profile text ──────────────────────────────────────────────────────────
 
@@ -115,6 +132,7 @@ export function ProfileEditForm({
           return;
         }
         setAvatarSuccess("Photo updated.");
+        setAvatarVersion(Date.now());
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         router.refresh();
       } catch {
@@ -144,6 +162,7 @@ export function ProfileEditForm({
           return;
         }
         setBackgroundSuccess("Background updated.");
+        setBackgroundVersion(Date.now());
         if (backgroundInputRef.current) backgroundInputRef.current.value = "";
         router.refresh();
       } catch {
@@ -160,8 +179,9 @@ export function ProfileEditForm({
         const result = await removeProfileBackground();
         if (result?.error) setBackgroundError(result.error);
         else {
-          setBackgroundSuccess("Background removed.");
-          router.refresh();
+        setBackgroundSuccess("Background removed.");
+        setBackgroundVersion(null);
+        router.refresh();
         }
       } catch {
         setBackgroundError("Something went wrong. Please try again.");
