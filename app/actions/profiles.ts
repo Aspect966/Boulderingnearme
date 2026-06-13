@@ -43,6 +43,51 @@ export async function updateProfile(formData: FormData) {
   return { success: true };
 }
 
+function isOwnProfileAssetPath(
+  userId: string,
+  path: string,
+  kind: "avatar" | "background"
+): boolean {
+  const prefix = `${userId}/${kind}.`;
+  return path.startsWith(prefix) && !path.includes("..");
+}
+
+async function saveProfileAssetPath(
+  kind: "avatar" | "background",
+  path: string
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/auth/login?next=/profile/edit");
+
+  if (!isOwnProfileAssetPath(user.id, path, kind)) {
+    return { error: "Invalid image path." };
+  }
+
+  const column = kind === "avatar" ? "avatar_path" : "background_path";
+  const { error } = await supabase
+    .from("profiles")
+    .update({ [column]: path })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/profile/${user.id}`);
+  revalidatePath("/profile/edit");
+  return { success: true };
+}
+
+export async function saveProfileAvatarPath(path: string) {
+  return saveProfileAssetPath("avatar", path);
+}
+
+export async function saveProfileBackgroundPath(path: string) {
+  return saveProfileAssetPath("background", path);
+}
+
 export async function uploadProfileAvatar(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -57,16 +102,7 @@ export async function uploadProfileAvatar(formData: FormData) {
   const result = await uploadProfileImage(supabase, user.id, file, "avatar");
   if (result.error) return { error: result.error };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ avatar_path: result.path })
-    .eq("id", user.id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/profile/${user.id}`);
-  revalidatePath("/profile/edit");
-  return { success: true };
+  return saveProfileAvatarPath(result.path!);
 }
 
 export async function uploadProfileBackground(formData: FormData) {
@@ -83,16 +119,7 @@ export async function uploadProfileBackground(formData: FormData) {
   const result = await uploadProfileImage(supabase, user.id, file, "background");
   if (result.error) return { error: result.error };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ background_path: result.path })
-    .eq("id", user.id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath(`/profile/${user.id}`);
-  revalidatePath("/profile/edit");
-  return { success: true };
+  return saveProfileBackgroundPath(result.path!);
 }
 
 export async function removeProfileBackground() {

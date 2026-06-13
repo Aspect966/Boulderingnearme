@@ -2,17 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
 import {
   removeProfileBackground,
+  saveProfileAvatarPath,
+  saveProfileBackgroundPath,
   updateProfile,
-  uploadProfileAvatar,
-  uploadProfileBackground,
 } from "@/app/actions/profiles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { uploadProfileImage } from "@/lib/profile-images";
+import { createClient } from "@/lib/supabase/client";
 import { getProfileAssetUrl } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
 
@@ -23,50 +26,118 @@ export function ProfileEditForm({
   profile: Profile;
   showWelcome?: boolean;
 }) {
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter();
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarSuccess, setAvatarSuccess] = useState<string | null>(null);
+  const [backgroundError, setBackgroundError] = useState<string | null>(null);
+  const [backgroundSuccess, setBackgroundSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const avatarUrl = getProfileAssetUrl(profile.avatar_path);
   const backgroundUrl = getProfileAssetUrl(profile.background_path);
 
   function handleProfileSubmit(formData: FormData) {
-    setError(null);
-    setSuccess(null);
+    setProfileError(null);
+    setProfileSuccess(null);
     startTransition(async () => {
       const result = await updateProfile(formData);
-      if (result?.error) setError(result.error);
-      else setSuccess("Profile updated.");
+      if (result?.error) setProfileError(result.error);
+      else setProfileSuccess("Profile updated.");
     });
   }
 
-  function handleAvatarSubmit(formData: FormData) {
-    setError(null);
-    setSuccess(null);
+  async function uploadAsset(
+    file: File,
+    kind: "avatar" | "background"
+  ): Promise<{ error?: string }> {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { error: "You must be logged in to upload images." };
+    }
+
+    const result = await uploadProfileImage(supabase, user.id, file, kind);
+    if (result.error || !result.path) {
+      return { error: result.error ?? "Upload failed." };
+    }
+
+    const saveResult =
+      kind === "avatar"
+        ? await saveProfileAvatarPath(result.path)
+        : await saveProfileBackgroundPath(result.path);
+
+    if (saveResult?.error) {
+      return { error: saveResult.error };
+    }
+
+    return {};
+  }
+
+  function handleAvatarSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAvatarError(null);
+    setAvatarSuccess(null);
+
+    const file = avatarInputRef.current?.files?.[0];
+    if (!file) {
+      setAvatarError("Please choose an image.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await uploadProfileAvatar(formData);
-      if (result?.error) setError(result.error);
-      else setSuccess("Avatar updated.");
+      const result = await uploadAsset(file, "avatar");
+      if (result.error) {
+        setAvatarError(result.error);
+        return;
+      }
+
+      setAvatarSuccess("Avatar updated.");
+      avatarInputRef.current && (avatarInputRef.current.value = "");
+      router.refresh();
     });
   }
 
-  function handleBackgroundSubmit(formData: FormData) {
-    setError(null);
-    setSuccess(null);
+  function handleBackgroundSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBackgroundError(null);
+    setBackgroundSuccess(null);
+
+    const file = backgroundInputRef.current?.files?.[0];
+    if (!file) {
+      setBackgroundError("Please choose an image.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await uploadProfileBackground(formData);
-      if (result?.error) setError(result.error);
-      else setSuccess("Background updated.");
+      const result = await uploadAsset(file, "background");
+      if (result.error) {
+        setBackgroundError(result.error);
+        return;
+      }
+
+      setBackgroundSuccess("Background updated.");
+      backgroundInputRef.current && (backgroundInputRef.current.value = "");
+      router.refresh();
     });
   }
 
   function handleRemoveBackground() {
-    setError(null);
-    setSuccess(null);
+    setBackgroundError(null);
+    setBackgroundSuccess(null);
     startTransition(async () => {
       const result = await removeProfileBackground();
-      if (result?.error) setError(result.error);
-      else setSuccess("Background removed.");
+      if (result?.error) setBackgroundError(result.error);
+      else {
+        setBackgroundSuccess("Background removed.");
+        router.refresh();
+      }
     });
   }
 
@@ -100,15 +171,19 @@ export function ProfileEditForm({
               </div>
             )}
           </div>
-          <form action={handleBackgroundSubmit} className="flex flex-wrap items-center gap-3">
+          <form
+            onSubmit={handleBackgroundSubmit}
+            className="flex flex-wrap items-center gap-3"
+          >
             <input
+              ref={backgroundInputRef}
               type="file"
               name="background"
               accept="image/*"
               className="text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-sm file:font-medium"
             />
             <Button type="submit" size="sm" disabled={pending}>
-              Upload background
+              {pending ? "Uploading..." : "Upload background"}
             </Button>
             {backgroundUrl && (
               <Button
@@ -122,6 +197,10 @@ export function ProfileEditForm({
               </Button>
             )}
           </form>
+          {backgroundError && <p className="text-sm text-red-600">{backgroundError}</p>}
+          {backgroundSuccess && (
+            <p className="text-sm text-green-700">{backgroundSuccess}</p>
+          )}
         </CardContent>
       </Card>
 
@@ -140,18 +219,21 @@ export function ProfileEditForm({
                 </div>
               )}
             </div>
-            <form action={handleAvatarSubmit} className="flex flex-wrap items-center gap-3">
+            <form onSubmit={handleAvatarSubmit} className="flex flex-wrap items-center gap-3">
               <input
+                ref={avatarInputRef}
                 type="file"
                 name="avatar"
                 accept="image/*"
                 className="text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-sm file:font-medium"
               />
               <Button type="submit" size="sm" disabled={pending}>
-                Upload photo
+                {pending ? "Uploading..." : "Upload photo"}
               </Button>
             </form>
           </div>
+          {avatarError && <p className="text-sm text-red-600">{avatarError}</p>}
+          {avatarSuccess && <p className="text-sm text-green-700">{avatarSuccess}</p>}
         </CardContent>
       </Card>
 
@@ -201,8 +283,8 @@ export function ProfileEditForm({
                 placeholder="instagram.com/you or yoursite.com"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-green-700">{success}</p>}
+            {profileError && <p className="text-sm text-red-600">{profileError}</p>}
+            {profileSuccess && <p className="text-sm text-green-700">{profileSuccess}</p>}
             <div className="flex flex-wrap gap-3">
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving..." : "Save profile"}
