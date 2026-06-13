@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Outfit } from "next/font/google";
 import { Header } from "@/components/header";
 import { LEGAL } from "@/components/legal-document";
+import { ThemeProvider } from "@/components/theme-provider";
+import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -26,10 +28,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${outfit.variable} h-full`}>
-      <body className="min-h-full bg-stone-50 font-[family-name:var(--font-outfit)] text-stone-900 antialiased">
-        <Header />
-        <main>{children}</main>
-        <footer className="border-t border-stone-200 bg-white">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
+      </head>
+      <body className="min-h-full font-[family-name:var(--font-outfit)] antialiased">
+        <ThemeProvider>
+          <Header />
+          <main>{children}</main>
+          <footer className="themed-footer border-t">
           <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-stone-500 sm:px-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p>BoulderingNearMe.com — community-powered outdoor bouldering</p>
@@ -47,7 +53,8 @@ export default function RootLayout({
               By using {LEGAL.siteName}, you agree to our Terms and Privacy Policy.
             </p>
           </div>
-        </footer>
+          </footer>
+        </ThemeProvider>
       </body>
     </html>
   );

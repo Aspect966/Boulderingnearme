@@ -12,8 +12,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative overflow-hidden border-b border-stone-200 bg-stone-900 text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(217,119,6,0.25),_transparent_50%)]" />
+      <section className="themed-hero relative overflow-hidden border-b text-white">
+        <div className="themed-hero-gradient absolute inset-0" />
         <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           <div className="max-w-2xl">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-amber-400">

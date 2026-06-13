@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/actions/auth";
+import { CustomizationNavButton } from "@/components/customization-trigger";
 import { cn } from "@/lib/utils";
 
 type MobileNavProps = {
@@ -104,6 +105,7 @@ export function MobileNav({ userId }: MobileNavProps) {
             <Link href="/" className={linkClass} onClick={closeMenu}>
               Explore
             </Link>
+            <CustomizationNavButton onOpen={closeMenu} />
             {userId ? (
               <>
                 <Link

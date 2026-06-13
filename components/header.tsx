@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import { CustomizationTrigger } from "@/components/customization-trigger";
 import { MobileNav } from "@/components/mobile-nav";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ export async function Header() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-stone-200/80 bg-white/90 backdrop-blur-md">
+    <header className="themed-header sticky top-0 z-50 border-b backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-2">
           <MobileNav userId={user?.id ?? null} />
@@ -37,6 +38,7 @@ export async function Header() {
           >
             Explore
           </Link>
+          <CustomizationTrigger className="rounded-lg px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100" />
           {user ? (
             <>
               <Link
