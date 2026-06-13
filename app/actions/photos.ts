@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { uploadPhotosForBoulder, validatePhotoFile } from "@/lib/photos";
+import { MAX_BOULDER_PHOTOS, uploadPhotosForBoulder, validatePhotoFile } from "@/lib/photos";
 import { createClient } from "@/lib/supabase/server";
 
 export async function uploadBoulderPhoto(boulderId: string, formData: FormData) {
@@ -14,23 +14,28 @@ export async function uploadBoulderPhoto(boulderId: string, formData: FormData) 
   if (!user) redirect(`/auth/login?next=/boulders/${boulderId}`);
 
   const file = formData.get("photo") as File | null;
-  const validationError = validatePhotoFile(file as File);
-  if (validationError) {
-    return { error: validationError };
-  }
+  if (!file || file.size === 0) return { error: "Please choose a photo." };
+
+  const validationError = validatePhotoFile(file);
+  if (validationError) return { error: validationError };
 
   const { count } = await supabase
     .from("boulder_photos")
     .select("*", { count: "exact", head: true })
     .eq("boulder_id", boulderId);
 
-  const isFirstPhoto = (count ?? 0) === 0;
+  const currentCount = count ?? 0;
+  if (currentCount >= MAX_BOULDER_PHOTOS) {
+    return { error: `This boulder already has ${MAX_BOULDER_PHOTOS} photos, which is the maximum.` };
+  }
+
+  const isFirstPhoto = currentCount === 0;
 
   const result = await uploadPhotosForBoulder(
     supabase,
     user.id,
     boulderId,
-    [file as File],
+    [file],
     isFirstPhoto ? 0 : -1
   );
 

@@ -4,13 +4,23 @@ import type { BoulderPhoto } from "@/lib/types";
 export const MAX_BOULDER_PHOTOS = 10;
 export const MAX_PHOTO_BYTES = 30 * 1024 * 1024;
 
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+
 export function validatePhotoFile(file: File): string | null {
   if (!file || file.size === 0) {
     return "Please choose a photo to upload.";
   }
 
-  if (!file.type.startsWith("image/")) {
-    return "Only image files are allowed.";
+  const ext = (file.name.split(".").pop() ?? "").toLowerCase();
+
+  if (ext === "heic" || ext === "heif") {
+    return "HEIC photos aren't supported. On iPhone, tap Share → Save as JPEG, then try again.";
+  }
+
+  // iOS sometimes reports an empty MIME type — fall back to extension check
+  const mimeOk = file.type === "" || file.type.startsWith("image/");
+  if (!mimeOk || !ALLOWED_EXTENSIONS.has(ext)) {
+    return "Only JPEG, PNG, WebP, or GIF images are allowed.";
   }
 
   if (file.size > MAX_PHOTO_BYTES) {

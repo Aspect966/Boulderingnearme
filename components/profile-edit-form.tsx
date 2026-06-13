@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { uploadProfileImage } from "@/lib/profile-images";
+import { uploadProfileImage, validateProfileImage } from "@/lib/profile-images";
 import { createClient } from "@/lib/supabase/client";
 import { getProfileAssetUrl } from "@/lib/storage";
 import type { Profile } from "@/lib/types";
@@ -27,33 +27,47 @@ export function ProfileEditForm({
   showWelcome?: boolean;
 }) {
   const router = useRouter();
+
+  // Each section has its own pending + feedback state so they don't block each other
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profilePending, startProfileTransition] = useTransition();
+
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [avatarSuccess, setAvatarSuccess] = useState<string | null>(null);
+  const [avatarPending, startAvatarTransition] = useTransition();
+
   const [backgroundError, setBackgroundError] = useState<string | null>(null);
   const [backgroundSuccess, setBackgroundSuccess] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [backgroundPending, startBackgroundTransition] = useTransition();
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   const avatarUrl = getProfileAssetUrl(profile.avatar_path);
   const backgroundUrl = getProfileAssetUrl(profile.background_path);
 
+  // ── Profile text ──────────────────────────────────────────────────────────
+
   function handleProfileSubmit(formData: FormData) {
     setProfileError(null);
     setProfileSuccess(null);
-    startTransition(async () => {
+    startProfileTransition(async () => {
       const result = await updateProfile(formData);
       if (result?.error) setProfileError(result.error);
       else setProfileSuccess("Profile updated.");
     });
   }
 
+  // ── Shared upload helper ──────────────────────────────────────────────────
+
   async function uploadAsset(
     file: File,
     kind: "avatar" | "background"
   ): Promise<{ error?: string }> {
+    const validationError = validateProfileImage(file);
+    if (validationError) return { error: validationError };
+
     const supabase = createClient();
     const {
       data: { user },
@@ -80,6 +94,8 @@ export function ProfileEditForm({
     return {};
   }
 
+  // ── Avatar ────────────────────────────────────────────────────────────────
+
   function handleAvatarSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAvatarError(null);
@@ -91,18 +107,23 @@ export function ProfileEditForm({
       return;
     }
 
-    startTransition(async () => {
-      const result = await uploadAsset(file, "avatar");
-      if (result.error) {
-        setAvatarError(result.error);
-        return;
+    startAvatarTransition(async () => {
+      try {
+        const result = await uploadAsset(file, "avatar");
+        if (result.error) {
+          setAvatarError(result.error);
+          return;
+        }
+        setAvatarSuccess("Photo updated.");
+        if (avatarInputRef.current) avatarInputRef.current.value = "";
+        router.refresh();
+      } catch {
+        setAvatarError("Something went wrong. Please try again.");
       }
-
-      setAvatarSuccess("Avatar updated.");
-      avatarInputRef.current && (avatarInputRef.current.value = "");
-      router.refresh();
     });
   }
+
+  // ── Background ────────────────────────────────────────────────────────────
 
   function handleBackgroundSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,28 +136,35 @@ export function ProfileEditForm({
       return;
     }
 
-    startTransition(async () => {
-      const result = await uploadAsset(file, "background");
-      if (result.error) {
-        setBackgroundError(result.error);
-        return;
+    startBackgroundTransition(async () => {
+      try {
+        const result = await uploadAsset(file, "background");
+        if (result.error) {
+          setBackgroundError(result.error);
+          return;
+        }
+        setBackgroundSuccess("Background updated.");
+        if (backgroundInputRef.current) backgroundInputRef.current.value = "";
+        router.refresh();
+      } catch {
+        setBackgroundError("Something went wrong. Please try again.");
       }
-
-      setBackgroundSuccess("Background updated.");
-      backgroundInputRef.current && (backgroundInputRef.current.value = "");
-      router.refresh();
     });
   }
 
   function handleRemoveBackground() {
     setBackgroundError(null);
     setBackgroundSuccess(null);
-    startTransition(async () => {
-      const result = await removeProfileBackground();
-      if (result?.error) setBackgroundError(result.error);
-      else {
-        setBackgroundSuccess("Background removed.");
-        router.refresh();
+    startBackgroundTransition(async () => {
+      try {
+        const result = await removeProfileBackground();
+        if (result?.error) setBackgroundError(result.error);
+        else {
+          setBackgroundSuccess("Background removed.");
+          router.refresh();
+        }
+      } catch {
+        setBackgroundError("Something went wrong. Please try again.");
       }
     });
   }
@@ -149,6 +177,7 @@ export function ProfileEditForm({
         </div>
       )}
 
+      {/* Cover image */}
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-stone-900">Cover image</h2>
@@ -171,46 +200,43 @@ export function ProfileEditForm({
               </div>
             )}
           </div>
-          <form
-            onSubmit={handleBackgroundSubmit}
-            className="flex flex-wrap items-center gap-3"
-          >
+          <form onSubmit={handleBackgroundSubmit} className="flex flex-wrap items-center gap-3">
             <input
               ref={backgroundInputRef}
               type="file"
               name="background"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               className="text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-sm file:font-medium"
             />
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending ? "Uploading..." : "Upload background"}
+            <Button type="submit" size="sm" disabled={backgroundPending}>
+              {backgroundPending ? "Uploading…" : "Upload background"}
             </Button>
             {backgroundUrl && (
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                disabled={pending}
+                disabled={backgroundPending}
                 onClick={handleRemoveBackground}
               >
                 Remove
               </Button>
             )}
           </form>
+          <p className="text-xs text-stone-400">JPEG, PNG, WebP or GIF · max 30 MB</p>
           {backgroundError && <p className="text-sm text-red-600">{backgroundError}</p>}
-          {backgroundSuccess && (
-            <p className="text-sm text-green-700">{backgroundSuccess}</p>
-          )}
+          {backgroundSuccess && <p className="text-sm text-green-700">{backgroundSuccess}</p>}
         </CardContent>
       </Card>
 
+      {/* Profile photo */}
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-stone-900">Profile photo</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Avatar preview" fill className="object-cover" />
               ) : (
@@ -224,19 +250,21 @@ export function ProfileEditForm({
                 ref={avatarInputRef}
                 type="file"
                 name="avatar"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="text-sm text-stone-600 file:mr-3 file:rounded-lg file:border-0 file:bg-stone-100 file:px-3 file:py-2 file:text-sm file:font-medium"
               />
-              <Button type="submit" size="sm" disabled={pending}>
-                {pending ? "Uploading..." : "Upload photo"}
+              <Button type="submit" size="sm" disabled={avatarPending}>
+                {avatarPending ? "Uploading…" : "Upload photo"}
               </Button>
             </form>
           </div>
+          <p className="text-xs text-stone-400">JPEG, PNG, WebP or GIF · max 30 MB</p>
           {avatarError && <p className="text-sm text-red-600">{avatarError}</p>}
           {avatarSuccess && <p className="text-sm text-green-700">{avatarSuccess}</p>}
         </CardContent>
       </Card>
 
+      {/* About you */}
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-stone-900">About you</h2>
@@ -259,7 +287,7 @@ export function ProfileEditForm({
               <Textarea
                 name="bio"
                 defaultValue={profile.bio ?? ""}
-                placeholder="Tell climbers about your style, home crag, or favorite sends..."
+                placeholder="Tell climbers about your style, home crag, or favorite sends…"
                 maxLength={500}
               />
             </div>
@@ -286,8 +314,8 @@ export function ProfileEditForm({
             {profileError && <p className="text-sm text-red-600">{profileError}</p>}
             {profileSuccess && <p className="text-sm text-green-700">{profileSuccess}</p>}
             <div className="flex flex-wrap gap-3">
-              <Button type="submit" disabled={pending}>
-                {pending ? "Saving..." : "Save profile"}
+              <Button type="submit" disabled={profilePending}>
+                {profilePending ? "Saving…" : "Save profile"}
               </Button>
               <Link href={`/profile/${profile.id}`}>
                 <Button type="button" variant="outline">

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { uploadProfileImage } from "@/lib/profile-images";
 import { createClient } from "@/lib/supabase/server";
 
 export async function updateProfile(formData: FormData) {
@@ -54,7 +53,7 @@ function isOwnProfileAssetPath(
 
 async function saveProfileAssetPath(
   kind: "avatar" | "background",
-  path: string
+  newPath: string
 ): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient();
   const {
@@ -63,17 +62,36 @@ async function saveProfileAssetPath(
 
   if (!user) redirect("/auth/login?next=/profile/edit");
 
-  if (!isOwnProfileAssetPath(user.id, path, kind)) {
+  if (!isOwnProfileAssetPath(user.id, newPath, kind)) {
     return { error: "Invalid image path." };
   }
 
   const column = kind === "avatar" ? "avatar_path" : "background_path";
+
+  // Fetch the current path so we can clean up the old file if the extension changed
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select(column)
+    .eq("id", user.id)
+    .single();
+
+  const oldPath = (existing as Record<string, string | null> | null)?.[column] ?? null;
+
   const { error } = await supabase
     .from("profiles")
-    .update({ [column]: path })
+    .update({ [column]: newPath })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    // DB save failed — roll back the just-uploaded storage object
+    await supabase.storage.from("profile-assets").remove([newPath]);
+    return { error: error.message };
+  }
+
+  // Delete the old file only when the path (i.e. extension) changed
+  if (oldPath && oldPath !== newPath) {
+    await supabase.storage.from("profile-assets").remove([oldPath]);
+  }
 
   revalidatePath(`/profile/${user.id}`);
   revalidatePath("/profile/edit");
@@ -86,40 +104,6 @@ export async function saveProfileAvatarPath(path: string) {
 
 export async function saveProfileBackgroundPath(path: string) {
   return saveProfileAssetPath("background", path);
-}
-
-export async function uploadProfileAvatar(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth/login?next=/profile/edit");
-
-  const file = formData.get("avatar") as File | null;
-  if (!file || file.size === 0) return { error: "Please choose an image." };
-
-  const result = await uploadProfileImage(supabase, user.id, file, "avatar");
-  if (result.error) return { error: result.error };
-
-  return saveProfileAvatarPath(result.path!);
-}
-
-export async function uploadProfileBackground(formData: FormData) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/auth/login?next=/profile/edit");
-
-  const file = formData.get("background") as File | null;
-  if (!file || file.size === 0) return { error: "Please choose an image." };
-
-  const result = await uploadProfileImage(supabase, user.id, file, "background");
-  if (result.error) return { error: result.error };
-
-  return saveProfileBackgroundPath(result.path!);
 }
 
 export async function removeProfileBackground() {
@@ -136,16 +120,16 @@ export async function removeProfileBackground() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.background_path) {
-    await supabase.storage.from("profile-assets").remove([profile.background_path]);
-  }
-
   const { error } = await supabase
     .from("profiles")
     .update({ background_path: null })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
+
+  if (profile?.background_path) {
+    await supabase.storage.from("profile-assets").remove([profile.background_path]);
+  }
 
   revalidatePath(`/profile/${user.id}`);
   revalidatePath("/profile/edit");
